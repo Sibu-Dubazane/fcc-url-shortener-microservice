@@ -1,65 +1,45 @@
-const express = require("express");
-const dns = require("dns");
-const bodyParser = require("body-parser");
-
+const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
+const cors = require('cors');
+const dns = require('dns');
+const urlParser = require('url');
 
-// Basic in-memory storage (for simplicity)
-let urlDatabase = [];
-let id = 1;
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Middleware
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+// In-memory DB for shortened URLs
+const urlDatabase = [];
+// Example: urlDatabase = [{ original_url: 'https://freecodecamp.org', short_url: 1 }, ...]
 
-// Root route
-app.get("/", (req, res) => {
-  res.send("URL Shortener Microservice");
+// Serve homepage or basic info if needed
+app.get('/', (req, res) => {
+  res.send('URL Shortener Microservice');
 });
 
-// POST /api/shorturl - shorten URL
-app.post("/api/shorturl", (req, res) => {
+// POST endpoint to create short URL
+app.post('/api/shorturl', (req, res) => {
   let originalUrl = req.body.url;
 
-  // Validate URL format using regex or URL class
+  // Parse URL to get hostname
+  let hostname;
   try {
-    let urlObj = new URL(originalUrl);
-
-    // dns.lookup to verify hostname
-    dns.lookup(urlObj.hostname, (err) => {
-      if (err) {
-        return res.json({ error: "invalid url" });
-      } else {
-        // Check if URL is already stored
-        let found = urlDatabase.find((u) => u.original_url === originalUrl);
-        if (found) {
-          return res.json(found);
-        }
-        // Store new URL with short_url
-        let newUrl = { original_url: originalUrl, short_url: id++ };
-        urlDatabase.push(newUrl);
-        res.json(newUrl);
-      }
-    });
-  } catch {
-    return res.json({ error: "invalid url" });
+    hostname = new URL(originalUrl).hostname;
+  } catch (err) {
+    return res.json({ error: 'invalid url' });
   }
-});
 
-// GET /api/shorturl/:short_url - redirect
-app.get("/api/shorturl/:short_url", (req, res) => {
-  let shortUrl = Number(req.params.short_url);
-  let found = urlDatabase.find((u) => u.short_url === shortUrl);
+  // Validate hostname with dns.lookup
+  dns.lookup(hostname, (err) => {
+    if (err) {
+      return res.json({ error: 'invalid url' });
+    }
 
-  if (found) {
-    return res.redirect(found.original_url);
-  } else {
-    return res.json({ error: "No short URL found for the given input" });
-  }
-});
+    // Check if URL already exists in database
+    let found = urlDatabase.find(item => item.original_url === originalUrl);
+    if (found) {
+      // URL already shortened, return existing
+      return res.json({ original_url: found.original_url, short_url: found.short_url });
+    }
 
-// Start server
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+    // Create new short_url_
