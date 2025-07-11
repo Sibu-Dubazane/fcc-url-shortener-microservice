@@ -2,7 +2,6 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const dns = require('dns');
-const urlParser = require('url');
 
 app.use(cors());
 app.use(express.json());
@@ -42,4 +41,14 @@ app.post('/api/shorturl', (req, res) => {
       return res.json({ original_url: found.original_url, short_url: found.short_url });
     }
 
-    // Create new short_url_
+    // Create new short_url entry
+    const shortUrl = urlDatabase.length + 1;
+    urlDatabase.push({ original_url: originalUrl, short_url: shortUrl });
+    return res.json({ original_url: originalUrl, short_url: shortUrl });
+  });
+});
+
+// GET endpoint to redirect short URL to original URL
+app.get('/api/shorturl/:short_url', (req, res) => {
+  const shortUrl = Number(req.params.short_url);
+  const found = urlDatabase.find
