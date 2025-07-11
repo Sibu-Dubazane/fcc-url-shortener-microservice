@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const cors = require('cors');
-const dns = require('dns');
+const cors = require("cors");
+const dns = require("dns");
 
 app.use(cors());
 app.use(express.json());
@@ -9,15 +9,14 @@ app.use(express.urlencoded({ extended: true }));
 
 // In-memory DB for shortened URLs
 const urlDatabase = [];
-// Example: urlDatabase = [{ original_url: 'https://freecodecamp.org', short_url: 1 }, ...]
 
 // Serve homepage or basic info if needed
-app.get('/', (req, res) => {
-  res.send('URL Shortener Microservice');
+app.get("/", (req, res) => {
+  res.send("URL Shortener Microservice");
 });
 
 // POST endpoint to create short URL
-app.post('/api/shorturl', (req, res) => {
+app.post("/api/shorturl", (req, res) => {
   let originalUrl = req.body.url;
 
   // Parse URL to get hostname
@@ -25,20 +24,23 @@ app.post('/api/shorturl', (req, res) => {
   try {
     hostname = new URL(originalUrl).hostname;
   } catch (err) {
-    return res.json({ error: 'invalid url' });
+    return res.json({ error: "invalid url" });
   }
 
   // Validate hostname with dns.lookup
   dns.lookup(hostname, (err) => {
     if (err) {
-      return res.json({ error: 'invalid url' });
+      return res.json({ error: "invalid url" });
     }
 
     // Check if URL already exists in database
-    let found = urlDatabase.find(item => item.original_url === originalUrl);
+    let found = urlDatabase.find((item) => item.original_url === originalUrl);
     if (found) {
       // URL already shortened, return existing
-      return res.json({ original_url: found.original_url, short_url: found.short_url });
+      return res.json({
+        original_url: found.original_url,
+        short_url: found.short_url,
+      });
     }
 
     // Create new short_url entry
@@ -49,6 +51,19 @@ app.post('/api/shorturl', (req, res) => {
 });
 
 // GET endpoint to redirect short URL to original URL
-app.get('/api/shorturl/:short_url', (req, res) => {
+app.get("/api/shorturl/:short_url", (req, res) => {
   const shortUrl = Number(req.params.short_url);
-  const found = urlDatabase.find
+  const found = urlDatabase.find((item) => item.short_url === shortUrl);
+
+  if (found) {
+    return res.redirect(found.original_url);
+  } else {
+    return res.json({ error: "No short URL found for the given input" });
+  }
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
